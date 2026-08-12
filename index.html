@@ -6,8 +6,8 @@
     <title>智能证件照制作工具 | AI 自助拍照与换底</title>
     <!-- COI Service Worker at the absolute top of head -->
     <script src="coi-serviceworker.js"></script>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Local Tailwind CSS to satisfy COEP and ensure offline/secure context compatibility -->
+    <script src="tailwind.min.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -25,8 +25,8 @@
             }
         }
     </script>
-    <!-- FontAwesome for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- FontAwesome for icons with crossorigin to satisfy COEP -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
 
     <!-- @imgly/background-removal CDN Integration -->
     <script type="module">
