@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能证件照制作工具 | AI 自助拍照与换底</title>
+    <!-- COI Service Worker at the absolute top of head -->
+    <script src="coi-serviceworker.js"></script>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- @imgly/background-removal CDN Integration -->
+    <script type="module">
+        import { removeBackground } from "https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm";
+        window.imglyRemoveBackground = removeBackground;
+        console.log("IMG.LY Background Removal loaded successfully!");
+        // Dispatch event to notify page loaded
+        window.dispatchEvent(new CustomEvent('imgly-loaded'));
+    </script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-brand-500/30">
+                    <i class="fa-solid fa-camera-rotate text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-900 tracking-tight flex items-center">
+                        AI 智能证件照大师
+                        <span class="ml-2 px-1.5 py-0.5 bg-green-100 text-green-800 text-[10px] font-semibold rounded-md border border-green-200">
+                            本地安全处理
+                        </span>
+                    </h1>
+                    <p class="text-[11px] text-slate-500">100% 隐私安全，照片无需上传服务器</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <a href="https://github.com/jiojiojackson/id-photo" target="_blank" class="text-slate-500 hover:text-slate-800 transition">
+                    <i class="fa-brands fa-github text-xl"></i>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col lg:flex-row gap-6">
+
+        <!-- Left Column: Camera and Input -->
+        <div class="flex-1 flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden min-h-[500px]">
+            <!-- Tab Headers -->
+            <div class="flex border-b border-slate-200 bg-slate-50">
+                <button id="tab-camera" class="flex-1 py-3.5 px-4 font-semibold text-sm border-b-2 border-brand-600 text-brand-600 flex items-center justify-center space-x-2 bg-white transition">
+                    <i class="fa-solid fa-camera"></i>
+                    <span>相机拍摄</span>
+                </button>
+                <button id="tab-upload" class="flex-1 py-3.5 px-4 font-semibold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center justify-center space-x-2 transition">
+                    <i class="fa-solid fa-upload"></i>
+                    <span>上传照片</span>
+                </button>
+            </div>
+
+            <!-- Tab Content: Camera View -->
+            <div id="content-camera" class="flex-grow p-6 flex flex-col justify-between items-center relative">
+                <!-- Camera Select & Action Bar -->
+                <div class="w-full flex flex-wrap justify-between items-center gap-3 mb-4 z-10">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xs text-slate-500 font-medium"><i class="fa-solid fa-video mr-1"></i> 摄像头：</span>
+                        <select id="camera-select" class="text-xs bg-slate-100 border border-slate-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-brand-500 text-slate-700 min-w-[150px]">
+                            <option value="">正在检测镜头...</option>
+                        </select>
+                    </div>
+                    <button id="switch-camera-btn" class="text-xs bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-medium px-3 py-1.5 rounded-lg transition flex items-center space-x-1">
+                        <i class="fa-solid fa-rotate"></i>
+                        <span>切换前后镜头</span>
+                    </button>
+                </div>
+
+                <!-- Video viewport with Assist Overlay -->
+                <div class="relative bg-slate-900 rounded-xl overflow-hidden aspect-[3/4] w-full max-w-[320px] shadow-inner flex items-center justify-center border border-slate-800 group">
+                    <video id="video" autoplay playsinline class="w-full h-full object-cover scale-x-[-1]"></video>
+
+                    <!-- Guidance Line Overlays (SVG) -->
+                    <div id="guide-overlay" class="absolute inset-0 pointer-events-none select-none z-10">
+                        <!-- Standard ID Photo Oval Guide -->
+                        <svg class="w-full h-full" viewBox="0 0 300 400" xmlns="http://www.w3.org/2000/svg">
+                            <!-- Outer background semi-transparent mask -->
+                            <path d="M 0,0 L 300,0 L 300,400 L 0,400 Z M 150,210 C 105,210 75,160 75,110 C 75,60 105,35 150,35 C 195,35 225,60 225,110 C 225,160 195,210 150,210 Z" fill="rgba(15, 23, 42, 0.6)" fill-rule="evenodd"/>
+
+                            <!-- Dashed oval for Head -->
+                            <ellipse cx="150" cy="120" rx="65" ry="85" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-dasharray="6,4"/>
+
+                            <!-- Center horizontal & vertical lines -->
+                            <line x1="150" y1="20" x2="150" y2="380" stroke="rgba(34, 197, 94, 0.3)" stroke-width="1" stroke-dasharray="4,4" />
+                            <line x1="20" y1="120" x2="280" y2="120" stroke="rgba(34, 197, 94, 0.3)" stroke-width="1" stroke-dasharray="4,4" />
+
+                            <!-- Eyes level guide -->
+                            <line x1="85" y1="105" x2="215" y2="105" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3,3" />
+
+                            <!-- Chin level guide -->
+                            <line x1="100" y1="205" x2="200" y2="205" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3,3" />
+
+                            <!-- Shoulder guides -->
+                            <path d="M 55,320 Q 90,260 115,245" fill="none" stroke="#22c55e" stroke-width="2.5" />
+                            <path d="M 245,320 Q 210,260 185,245" fill="none" stroke="#22c55e" stroke-width="2.5" />
+                        </svg>
+
+                        <!-- Live Text Guide HUD -->
+                        <div class="absolute bottom-4 left-0 right-0 text-center px-4">
+                            <span class="bg-black/75 text-white text-[11px] px-3 py-1.5 rounded-full font-medium inline-block shadow border border-white/10 tracking-wide">
+                                💡 请将头部对准虚线，眼睛平视摄像头
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- No camera warning -->
+                    <div id="camera-error-overlay" class="absolute inset-0 bg-slate-900 hidden flex-col items-center justify-center p-6 text-center z-20">
+                        <div class="w-14 h-14 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500 mb-4 text-2xl">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                        <h4 class="text-white font-semibold text-sm mb-1">无法访问您的摄像头</h4>
+                        <p class="text-slate-400 text-xs max-w-[240px] mb-4">请确保已授予摄像头访问权限，或使用右侧“上传照片”标签上传本地相册照片。</p>
+                        <button id="retry-camera-btn" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition">
+                            重新尝试开启相机
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Capture controls -->
+                <div class="w-full flex flex-col items-center mt-6">
+                    <button id="capture-btn" class="w-20 h-20 rounded-full border-4 border-slate-200 bg-brand-600 hover:bg-brand-500 transition-all transform hover:scale-105 active:scale-95 shadow-lg shadow-brand-500/30 flex items-center justify-center text-white text-xl">
+                        <i class="fa-solid fa-camera"></i>
+                    </button>
+                    <p class="text-xs text-slate-400 mt-2 font-medium">按下进行快门拍照</p>
+                </div>
+            </div>
+
+            <!-- Tab Content: Upload View -->
+            <div id="content-upload" class="flex-grow p-6 hidden flex flex-col justify-center items-center">
+                <div class="border-2 border-dashed border-slate-300 hover:border-brand-500 rounded-2xl p-8 w-full max-w-[320px] text-center bg-slate-50 hover:bg-brand-50/20 transition cursor-pointer group" id="drop-zone">
+                    <input type="file" id="file-input" class="hidden" accept="image/*">
+                    <div class="w-14 h-14 bg-brand-50 group-hover:bg-brand-100 text-brand-600 rounded-full flex items-center justify-center mx-auto mb-4 transition">
+                        <i class="fa-solid fa-cloud-arrow-up text-xl"></i>
+                    </div>
+                    <h3 class="font-semibold text-sm text-slate-800 mb-1">拖拽或点击上传图片</h3>
+                    <p class="text-xs text-slate-400 max-w-[220px] mx-auto mb-3">支持 JPG、PNG 等主流格式，建议选择背景简单的半身照</p>
+                    <button class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition shadow-md">
+                        选择文件
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Settings, Processing and Preview -->
+        <div class="flex-1 flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <!-- Header title for settings -->
+            <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-sliders text-brand-600"></i>
+                    <span class="font-bold text-sm text-slate-800">证件照处理与参数</span>
+                </div>
+                <!-- Status Badge -->
+                <div id="processing-status" class="hidden flex items-center space-x-1.5 text-xs text-amber-600 font-semibold bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
+                    <i class="fa-solid fa-circle-notch animate-spin text-[10px]"></i>
+                    <span id="status-text">就绪</span>
+                </div>
+            </div>
+
+            <div class="p-6 flex flex-col gap-6 overflow-y-auto max-h-[80vh]">
+
+                <!-- Section 1: ID Photo Specification Preset -->
+                <div>
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">1. 选择证件照规格</h3>
+                    <div class="grid grid-cols-3 gap-2.5">
+                        <button id="btn-size-1inch" data-width="295" data-height="413" class="size-preset-btn border border-brand-500 bg-brand-50 text-brand-700 px-3 py-2.5 rounded-xl font-semibold text-xs flex flex-col items-center justify-center transition shadow-sm">
+                            <span class="text-sm font-bold">一寸</span>
+                            <span class="text-[10px] text-brand-500 mt-0.5">295 × 413 px</span>
+                        </button>
+                        <button id="btn-size-2inch" data-width="413" data-height="579" class="size-preset-btn border border-slate-200 hover:border-slate-300 text-slate-700 px-3 py-2.5 rounded-xl font-semibold text-xs flex flex-col items-center justify-center transition">
+                            <span class="text-sm font-bold">二寸</span>
+                            <span class="text-[10px] text-slate-400 mt-0.5">413 × 579 px</span>
+                        </button>
+                        <button id="btn-size-custom" data-width="390" data-height="567" class="size-preset-btn border border-slate-200 hover:border-slate-300 text-slate-700 px-3 py-2.5 rounded-xl font-semibold text-xs flex flex-col items-center justify-center transition">
+                            <span class="text-sm font-bold">自定义 / 护照</span>
+                            <span class="text-[10px] text-slate-400 mt-0.5">390 × 567 px</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Section 2: Preview Area with Background Replacement -->
+                <div>
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">2. 智能抠图与背景颜色</h3>
+
+                    <!-- Main Preview Card -->
+                    <div class="flex flex-col md:flex-row items-center gap-6 bg-slate-50 border border-slate-200 rounded-xl p-4">
+                        <!-- ID photo canvas box -->
+                        <div class="relative bg-white border border-slate-300 shadow-md rounded overflow-hidden aspect-[3/4] w-full max-w-[160px] flex items-center justify-center group">
+                            <!-- Background preview canvas -->
+                            <canvas id="preview-canvas" class="w-full h-full object-cover" width="295" height="413"></canvas>
+
+                            <!-- Loading / progress indicator -->
+                            <div id="ai-loading" class="absolute inset-0 bg-slate-900/85 backdrop-blur-sm hidden flex-col items-center justify-center p-4 text-center z-10 transition duration-300">
+                                <div class="relative flex items-center justify-center mb-3">
+                                    <div class="w-12 h-12 border-4 border-slate-600 border-t-brand-500 rounded-full animate-spin"></div>
+                                    <i class="fa-solid fa-wand-magic-sparkles text-brand-500 absolute text-sm animate-pulse"></i>
+                                </div>
+                                <h4 class="text-white font-semibold text-[11px] mb-1">正在进行本地抠图</h4>
+                                <div class="w-full bg-slate-700 rounded-full h-1.5 mt-2 overflow-hidden">
+                                    <div id="ai-progress-bar" class="bg-brand-500 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                                </div>
+                                <span id="ai-progress-text" class="text-[10px] text-slate-400 mt-1 font-semibold block">0%</span>
+                            </div>
+
+                            <!-- Empty photo placeholder -->
+                            <div id="canvas-placeholder" class="absolute inset-0 bg-slate-100 flex flex-col items-center justify-center text-center p-3">
+                                <div class="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center text-slate-400 mb-2">
+                                    <i class="fa-solid fa-image"></i>
+                                </div>
+                                <p class="text-[11px] text-slate-500 font-medium">尚未获取照片</p>
+                                <p class="text-[10px] text-slate-400 mt-0.5">请从左侧拍照或上传</p>
+                            </div>
+                        </div>
+
+                        <!-- BG Controller side panel -->
+                        <div class="flex-grow flex flex-col justify-center w-full gap-4">
+                            <!-- Color Swatches -->
+                            <div>
+                                <span class="text-xs text-slate-500 font-bold block mb-2">背景颜色选择</span>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <button data-color="#FFFFFF" class="bg-swatch w-8 h-8 rounded-full border-2 border-brand-500 shadow-sm relative focus:ring-2 focus:ring-brand-500" title="白色" style="background-color: #FFFFFF;">
+                                        <i class="fa-solid fa-check text-slate-800 text-[10px] absolute inset-0 m-auto flex items-center justify-center"></i>
+                                    </button>
+                                    <button data-color="#438EDB" class="bg-swatch w-8 h-8 rounded-full border border-slate-300 shadow-sm relative hover:scale-105 transition" title="蓝色" style="background-color: #438EDB;"></button>
+                                    <button data-color="#C00000" class="bg-swatch w-8 h-8 rounded-full border border-slate-300 shadow-sm relative hover:scale-105 transition" title="红色" style="background-color: #C00000;"></button>
+                                    <button data-color="transparent" class="bg-swatch w-8 h-8 rounded-full border border-slate-300 shadow-sm relative hover:scale-105 transition overflow-hidden bg-[linear-gradient(45deg,#ccc_25%,transparent_25%),linear-gradient(-45deg,#ccc_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#ccc_75%),linear-gradient(-45deg,transparent_75%,#ccc_75%)] bg-[size:8px_8px] bg-[position:0_0,0_4px,4px_-4px,-4px_0]" title="透明背景">
+                                        <!-- Transparent identifier -->
+                                    </button>
+                                    <div class="flex items-center space-x-1.5 border border-slate-200 bg-white px-2 py-1 rounded-full shadow-sm">
+                                        <input type="color" id="custom-color-picker" class="w-5 h-5 cursor-pointer border-0 bg-transparent rounded-full focus:outline-none" value="#FFFFFF">
+                                        <span class="text-[10px] font-semibold text-slate-500">自定义</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Auto BG Switch -->
+                            <div class="flex items-center justify-between border-t border-slate-200/60 pt-3">
+                                <div>
+                                    <span class="text-xs font-bold text-slate-700 block">自动人像抠图</span>
+                                    <span class="text-[10px] text-slate-400">一键提取人像更换背景</span>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="auto-remove-bg-toggle" class="sr-only peer" checked>
+                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-600"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Smart Tone Adjustment / Beauty -->
+                <div>
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">3. 智能修图与美颜调色</h3>
+                        <button id="auto-beautify-btn" class="bg-brand-50 hover:bg-brand-100 text-brand-600 border border-brand-200 hover:border-brand-300 text-xs font-bold px-3 py-1 rounded-full transition flex items-center space-x-1.5">
+                            <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i>
+                            <span>一键美颜</span>
+                        </button>
+                    </div>
+
+                    <div class="space-y-4 bg-slate-50 border border-slate-200 rounded-xl p-4">
+                        <!-- Brightness slider -->
+                        <div>
+                            <div class="flex justify-between text-xs font-semibold mb-1 text-slate-600">
+                                <span><i class="fa-regular fa-sun mr-1"></i> 亮度 (Brightness)</span>
+                                <span id="val-brightness">100%</span>
+                            </div>
+                            <input type="range" id="slider-brightness" min="50" max="150" value="100" class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-brand-600">
+                        </div>
+
+                        <!-- Contrast slider -->
+                        <div>
+                            <div class="flex justify-between text-xs font-semibold mb-1 text-slate-600">
+                                <span><i class="fa-solid fa-circle-half-stroke mr-1"></i> 对比度 (Contrast)</span>
+                                <span id="val-contrast">100%</span>
+                            </div>
+                            <input type="range" id="slider-contrast" min="50" max="150" value="100" class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-brand-600">
+                        </div>
+
+                        <!-- Saturation slider -->
+                        <div>
+                            <div class="flex justify-between text-xs font-semibold mb-1 text-slate-600">
+                                <span><i class="fa-solid fa-droplet mr-1"></i> 饱和度 (Saturation)</span>
+                                <span id="val-saturation">100%</span>
+                            </div>
+                            <input type="range" id="slider-saturation" min="0" max="180" value="100" class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-brand-600">
+                        </div>
+
+                        <!-- Exposure slider -->
+                        <div>
+                            <div class="flex justify-between text-xs font-semibold mb-1 text-slate-600">
+                                <span><i class="fa-solid fa-lightbulb mr-1"></i> 曝光 (Exposure)</span>
+                                <span id="val-exposure">0</span>
+                            </div>
+                            <input type="range" id="slider-exposure" min="-50" max="50" value="0" class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-brand-600">
+                        </div>
+
+                        <!-- Warmth slider -->
+                        <div>
+                            <div class="flex justify-between text-xs font-semibold mb-1 text-slate-600">
+                                <span><i class="fa-solid fa-temperature-half mr-1"></i> 色温 (Warmth)</span>
+                                <span id="val-warmth">0</span>
+                            </div>
+                            <input type="range" id="slider-warmth" min="-50" max="50" value="0" class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-brand-600">
+                        </div>
+
+                        <!-- Reset filters Button -->
+                        <div class="flex justify-end pt-1">
+                            <button id="reset-filters-btn" class="text-[11px] text-slate-500 hover:text-rose-600 font-semibold transition">
+                                <i class="fa-solid fa-arrow-rotate-left mr-1"></i> 重置所有调色参数
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 4: Export & Download -->
+                <div class="border-t border-slate-200 pt-6">
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">导出格式</label>
+                            <select id="export-format" class="w-full text-xs bg-white border border-slate-300 rounded-lg px-2.5 py-2 focus:outline-none focus:ring-1 focus:ring-brand-500 text-slate-700">
+                                <option value="image/jpeg">JPEG (体积较小)</option>
+                                <option value="image/png" selected>PNG (无损画质)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">文件大小控制</label>
+                            <select id="export-quality" class="w-full text-xs bg-white border border-slate-300 rounded-lg px-2.5 py-2 focus:outline-none focus:ring-1 focus:ring-brand-500 text-slate-700">
+                                <option value="0.95" selected>超清画质 (High Quality)</option>
+                                <option value="0.80">标准画质 (Medium Quality)</option>
+                                <option value="0.60">压缩画质 (Low Quality)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button id="download-btn" disabled class="w-full bg-brand-600 hover:bg-brand-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold text-sm py-3.5 px-4 rounded-xl shadow-lg shadow-brand-500/20 hover:shadow-brand-500/30 transition-all flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-download"></i>
+                        <span>保存与下载证件照</span>
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-6 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400 font-medium">
+            <p>© 2025 AI 智能证件照制作工具. 全本地算力支持，安全不泄露个人隐私。</p>
+            <p class="mt-1 text-[10px]">依托先进浏览器端深度学习技术 (@imgly/background-removal)</p>
+        </div>
+    </footer>
+
+    <!-- Interactive script and image manipulation core logic -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // State Management
+            const state = {
+                stream: null,
+                activeTab: 'camera', // camera | upload
+                selectedWidth: 295,
+                selectedHeight: 413,
+                bgColor: '#FFFFFF', // hexadecimal or transparent
+                autoRemoveBg: true,
+                rawImage: null,           // Image element containing original uploaded/taken picture
+                bgRemovedImage: null,     // HTMLImageElement or ImageBitmap containing transparency
+                isProcessing: false,
+                currentDeviceIndex: 0,
+                devices: [],
+                // Sliders
+                brightness: 100,
+                contrast: 100,
+                saturation: 100,
+                exposure: 0,
+                warmth: 0
+            };
+
+            // DOM Elements
+            const tabCamera = document.getElementById('tab-camera');
+            const tabUpload = document.getElementById('tab-upload');
+            const contentCamera = document.getElementById('content-camera');
+            const contentUpload = document.getElementById('content-upload');
+            const video = document.getElementById('video');
+            const cameraSelect = document.getElementById('camera-select');
+            const switchCameraBtn = document.getElementById('switch-camera-btn');
+            const cameraErrorOverlay = document.getElementById('camera-error-overlay');
+            const retryCameraBtn = document.getElementById('retry-camera-btn');
+            const captureBtn = document.getElementById('capture-btn');
+            const dropZone = document.getElementById('drop-zone');
+            const fileInput = document.getElementById('file-input');
+            const previewCanvas = document.getElementById('preview-canvas');
+            const canvasPlaceholder = document.getElementById('canvas-placeholder');
+            const aiLoading = document.getElementById('ai-loading');
+            const aiProgressBar = document.getElementById('ai-progress-bar');
+            const aiProgressText = document.getElementById('ai-progress-text');
+            const processingStatus = document.getElementById('processing-status');
+            const statusText = document.getElementById('status-text');
+            const customColorPicker = document.getElementById('custom-color-picker');
+            const autoRemoveBgToggle = document.getElementById('auto-remove-bg-toggle');
+            const downloadBtn = document.getElementById('download-btn');
+
+            // Slider elements
+            const sliderBrightness = document.getElementById('slider-brightness');
+            const sliderContrast = document.getElementById('slider-contrast');
+            const sliderSaturation = document.getElementById('slider-saturation');
+            const sliderExposure = document.getElementById('slider-exposure');
+            const sliderWarmth = document.getElementById('slider-warmth');
+
+            const valBrightness = document.getElementById('val-brightness');
+            const valContrast = document.getElementById('val-contrast');
+            const valSaturation = document.getElementById('val-saturation');
+            const valExposure = document.getElementById('val-exposure');
+            const valWarmth = document.getElementById('val-warmth');
+
+            const autoBeautifyBtn = document.getElementById('auto-beautify-btn');
+            const resetFiltersBtn = document.getElementById('reset-filters-btn');
+            const exportFormat = document.getElementById('export-format');
+            const exportQuality = document.getElementById('export-quality');
+
+            // Set current canvas context
+            const ctx = previewCanvas.getContext('2d');
+
+            // Tabs toggle logic
+            tabCamera.addEventListener('click', () => switchTab('camera'));
+            tabUpload.addEventListener('click', () => switchTab('upload'));
+
+            function switchTab(tab) {
+                state.activeTab = tab;
+                if (tab === 'camera') {
+                    tabCamera.className = "flex-1 py-3.5 px-4 font-semibold text-sm border-b-2 border-brand-600 text-brand-600 flex items-center justify-center space-x-2 bg-white transition";
+                    tabUpload.className = "flex-1 py-3.5 px-4 font-semibold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center justify-center space-x-2 transition";
+                    contentCamera.classList.remove('hidden');
+                    contentUpload.classList.add('hidden');
+                    startCamera();
+                } else {
+                    tabUpload.className = "flex-1 py-3.5 px-4 font-semibold text-sm border-b-2 border-brand-600 text-brand-600 flex items-center justify-center space-x-2 bg-white transition";
+                    tabCamera.className = "flex-1 py-3.5 px-4 font-semibold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center justify-center space-x-2 transition";
+                    contentUpload.classList.remove('hidden');
+                    contentCamera.classList.add('hidden');
+                    stopCamera();
+                }
+            }
+
+            // Camera handling
+            async function getCameras() {
+                try {
+                    await navigator.mediaDevices.getUserMedia({ video: true }); // Request initial permission to enumerate
+                    const allDevices = await navigator.mediaDevices.enumerateDevices();
+                    state.devices = allDevices.filter(device => device.kind === 'videoinput');
+
+                    cameraSelect.innerHTML = '';
+                    if (state.devices.length === 0) {
+                        cameraSelect.innerHTML = '<option value="">未找到摄像头</option>';
+                        return;
+                    }
+
+                    state.devices.forEach((device, index) => {
+                        const option = document.createElement('option');
+                        option.value = device.deviceId;
+                        option.textContent = device.label || `摄像头 ${index + 1}`;
+                        cameraSelect.appendChild(option);
+                    });
+                } catch (err) {
+                    console.warn("Permission denied or camera not found", err);
+                    cameraSelect.innerHTML = '<option value="">无镜头权限</option>';
+                }
+            }
+
+            async function startCamera() {
+                stopCamera();
+                cameraErrorOverlay.classList.add('hidden');
+
+                const deviceId = cameraSelect.value;
+                const constraints = {
+                    video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'user' },
+                    audio: false
+                };
+
+                try {
+                    state.stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    video.srcObject = state.stream;
+                } catch (err) {
+                    console.error("Error opening camera:", err);
+                    cameraErrorOverlay.classList.remove('hidden');
+                }
+            }
+
+            function stopCamera() {
+                if (state.stream) {
+                    state.stream.getTracks().forEach(track => track.stop());
+                    state.stream = null;
+                }
+            }
+
+            cameraSelect.addEventListener('change', startCamera);
+            retryCameraBtn.addEventListener('click', startCamera);
+
+            // Switch camera btn
+            switchCameraBtn.addEventListener('click', async () => {
+                if (state.devices.length > 1) {
+                    state.currentDeviceIndex = (state.currentDeviceIndex + 1) % state.devices.length;
+                    cameraSelect.value = state.devices[state.currentDeviceIndex].deviceId;
+                    await startCamera();
+                } else {
+                    // Try to toggle facingMode directly
+                    alert("检测到单摄像头，如果使用的是移动端，已自动切换对准方向！");
+                }
+            });
+
+            // Init Camera lists
+            getCameras().then(() => {
+                if (state.activeTab === 'camera') {
+                    startCamera();
+                }
+            });
+
+            // Upload Zone Actions
+            dropZone.addEventListener('click', () => fileInput.click());
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('border-brand-500', 'bg-brand-50/30');
+            });
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('border-brand-500', 'bg-brand-50/30');
+            });
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('border-brand-500', 'bg-brand-50/30');
+                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                    handleUploadedFile(e.dataTransfer.files[0]);
+                }
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files[0]) {
+                    handleUploadedFile(e.target.files[0]);
+                }
+            });
+
+            function handleUploadedFile(file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        state.rawImage = img;
+                        state.bgRemovedImage = null; // Clear old transparent cached copy
+                        processNewImage();
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+
+            // Capture photo from video stream
+            captureBtn.addEventListener('click', () => {
+                if (!state.stream) {
+                    alert("请先允许摄像头权限再进行拍摄！");
+                    return;
+                }
+                const captureCanvas = document.createElement('canvas');
+                captureCanvas.width = video.videoWidth || 640;
+                captureCanvas.height = video.videoHeight || 480;
+                const capCtx = captureCanvas.getContext('2d');
+
+                // Flip horizontally since video is flipped scale-x-[-1]
+                capCtx.translate(captureCanvas.width, 0);
+                capCtx.scale(-1, 1);
+                capCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
+
+                const img = new Image();
+                img.onload = () => {
+                    state.rawImage = img;
+                    state.bgRemovedImage = null; // Clear old cache
+                    processNewImage();
+                    // Optional switch to right settings column focus on mobile
+                    previewCanvas.scrollIntoView({ behavior: 'smooth' });
+                };
+                img.src = captureCanvas.toDataURL('image/png');
+            });
+
+            // Process new image (run background removal)
+            async function processNewImage() {
+                if (!state.rawImage) return;
+
+                canvasPlaceholder.classList.add('hidden');
+                downloadBtn.removeAttribute('disabled');
+
+                if (state.autoRemoveBg) {
+                    await removeImageBackground();
+                } else {
+                    renderProcessedImage();
+                }
+            }
+
+            // Remove Background via Library
+            async function removeImageBackground() {
+                if (!state.rawImage) return;
+
+                showProcessing(true);
+                aiLoading.classList.remove('hidden');
+                updateProgress(0, "正在加载本地抠图网络...");
+
+                // Convert img to blob
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = state.rawImage.naturalWidth;
+                tempCanvas.height = state.rawImage.naturalHeight;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.drawImage(state.rawImage, 0, 0);
+
+                tempCanvas.toBlob(async (blob) => {
+                    try {
+                        if (typeof window.imglyRemoveBackground === 'undefined') {
+                            throw new Error("扣图模型加载中或暂时不可用，请稍候重试！");
+                        }
+
+                        const resultBlob = await window.imglyRemoveBackground(blob, {
+                            model: 'medium',
+                            output: {
+                                format: 'image/png'
+                            },
+                            progress: (key, current, total) => {
+                                const percentage = Math.round((current / total) * 100);
+                                updateProgress(percentage, `抠图进度 ${percentage}%`);
+                            }
+                        });
+
+                        const transparentUrl = URL.createObjectURL(resultBlob);
+                        const transImg = new Image();
+                        transImg.onload = () => {
+                            state.bgRemovedImage = transImg;
+                            showProcessing(false);
+                            aiLoading.classList.add('hidden');
+                            renderProcessedImage();
+                        };
+                        transImg.src = transparentUrl;
+
+                    } catch (error) {
+                        console.error("Local background removal failed:", error);
+                        alert("本地 AI 抠图失败或耗时较长（需要 Cross-Origin 隔离环境）。\n已自动为您降级到普通剪裁预览！您也可以关闭‘自动人像抠图’继续操作。");
+                        state.bgRemovedImage = null;
+                        showProcessing(false);
+                        aiLoading.classList.add('hidden');
+                        renderProcessedImage();
+                    }
+                }, 'image/png');
+            }
+
+            function updateProgress(percentage, text) {
+                aiProgressBar.style.width = `${percentage}%`;
+                aiProgressText.textContent = text;
+                statusText.textContent = text;
+            }
+
+            function showProcessing(isProc) {
+                state.isProcessing = isProc;
+                if (isProc) {
+                    processingStatus.classList.remove('hidden');
+                    processingStatus.classList.add('flex');
+                } else {
+                    processingStatus.classList.add('hidden');
+                    processingStatus.classList.remove('flex');
+                }
+            }
+
+            // Event Listeners for Color presets
+            document.querySelectorAll('.bg-swatch').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    // Remove current active border
+                    document.querySelectorAll('.bg-swatch').forEach(b => {
+                        b.classList.remove('border-2', 'border-brand-500');
+                        b.classList.add('border-slate-300');
+                        const check = b.querySelector('.fa-check');
+                        if (check) check.remove();
+                    });
+
+                    // Add active state to selected
+                    const selectedBtn = e.currentTarget;
+                    selectedBtn.classList.remove('border-slate-300');
+                    selectedBtn.classList.add('border-2', 'border-brand-500');
+
+                    const checkIcon = document.createElement('i');
+                    checkIcon.className = "fa-solid fa-check text-slate-800 text-[10px] absolute inset-0 m-auto flex items-center justify-center";
+                    selectedBtn.appendChild(checkIcon);
+
+                    state.bgColor = selectedBtn.getAttribute('data-color');
+                    if (state.bgColor !== 'transparent') {
+                        customColorPicker.value = state.bgColor;
+                    }
+                    renderProcessedImage();
+                });
+            });
+
+            customColorPicker.addEventListener('input', (e) => {
+                // De-activate other swatches
+                document.querySelectorAll('.bg-swatch').forEach(b => {
+                    b.classList.remove('border-2', 'border-brand-500');
+                    b.classList.add('border-slate-300');
+                    const check = b.querySelector('.fa-check');
+                    if (check) check.remove();
+                });
+
+                state.bgColor = e.target.value;
+                renderProcessedImage();
+            });
+
+            autoRemoveBgToggle.addEventListener('change', (e) => {
+                state.autoRemoveBg = e.target.checked;
+                processNewImage();
+            });
+
+            // Specification/Size buttons
+            document.querySelectorAll('.size-preset-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.size-preset-btn').forEach(b => {
+                        b.className = "size-preset-btn border border-slate-200 hover:border-slate-300 text-slate-700 px-3 py-2.5 rounded-xl font-semibold text-xs flex flex-col items-center justify-center transition";
+                        const textSpan = b.querySelector('.text-brand-500');
+                        if (textSpan) {
+                            textSpan.className = "text-[10px] text-slate-400 mt-0.5";
+                        }
+                    });
+
+                    const selected = e.currentTarget;
+                    selected.className = "size-preset-btn border border-brand-500 bg-brand-50 text-brand-700 px-3 py-2.5 rounded-xl font-semibold text-xs flex flex-col items-center justify-center transition shadow-sm";
+                    const spanSubText = selected.querySelector('span:last-child');
+                    if (spanSubText) {
+                        spanSubText.className = "text-[10px] text-brand-500 mt-0.5";
+                    }
+
+                    state.selectedWidth = parseInt(selected.getAttribute('data-width'));
+                    state.selectedHeight = parseInt(selected.getAttribute('data-height'));
+
+                    previewCanvas.width = state.selectedWidth;
+                    previewCanvas.height = state.selectedHeight;
+
+                    renderProcessedImage();
+                });
+            });
+
+            // Slider update events
+            function registerSlider(slider, valEl, key, isOffset = false) {
+                slider.addEventListener('input', (e) => {
+                    const val = parseInt(e.target.value);
+                    state[key] = val;
+                    valEl.textContent = isOffset ? (val > 0 ? `+${val}` : val) : `${val}%`;
+                    renderProcessedImage();
+                });
+            }
+
+            registerSlider(sliderBrightness, valBrightness, 'brightness');
+            registerSlider(sliderContrast, valContrast, 'contrast');
+            registerSlider(sliderSaturation, valSaturation, 'saturation');
+            registerSlider(sliderExposure, valExposure, 'exposure', true);
+            registerSlider(sliderWarmth, valWarmth, 'warmth', true);
+
+            // One-click beautify (智能一键调色/美颜)
+            autoBeautifyBtn.addEventListener('click', () => {
+                // Apply optimal values
+                state.brightness = 108; // Slight boost to skin luminosity
+                state.contrast = 104;   // Clear definition
+                state.saturation = 105; // Vivid natural look
+                state.exposure = 6;     // Slightly brightened
+                state.warmth = 2;       // Healthy rosy skin warmth
+
+                sliderBrightness.value = state.brightness;
+                sliderContrast.value = state.contrast;
+                sliderSaturation.value = state.saturation;
+                sliderExposure.value = state.exposure;
+                sliderWarmth.value = state.warmth;
+
+                valBrightness.textContent = '108%';
+                valContrast.textContent = '104%';
+                valSaturation.textContent = '105%';
+                valExposure.textContent = '+6';
+                valWarmth.textContent = '+2';
+
+                renderProcessedImage();
+            });
+
+            // Reset filters
+            resetFiltersBtn.addEventListener('click', () => {
+                state.brightness = 100;
+                state.contrast = 100;
+                state.saturation = 100;
+                state.exposure = 0;
+                state.warmth = 0;
+
+                sliderBrightness.value = 100;
+                sliderContrast.value = 100;
+                sliderSaturation.value = 100;
+                sliderExposure.value = 0;
+                sliderWarmth.value = 0;
+
+                valBrightness.textContent = '100%';
+                valContrast.textContent = '100%';
+                valSaturation.textContent = '100%';
+                valExposure.textContent = '0';
+                valWarmth.textContent = '0';
+
+                renderProcessedImage();
+            });
+
+            // Drawing Engine
+            function renderProcessedImage() {
+                if (!state.rawImage) return;
+
+                const targetW = state.selectedWidth;
+                const targetH = state.selectedHeight;
+
+                // 1. Clear background
+                ctx.clearRect(0, 0, targetW, targetH);
+
+                // 2. Draw background color
+                if (state.bgColor === 'transparent') {
+                    // Draw transparent checkerboard pattern
+                    const size = 10;
+                    for (let x = 0; x < targetW; x += size * 2) {
+                        for (let y = 0; y < targetH; y += size * 2) {
+                            ctx.fillStyle = '#f3f4f6';
+                            ctx.fillRect(x, y, size, size);
+                            ctx.fillRect(x + size, y + size, size, size);
+                            ctx.fillStyle = '#ffffff';
+                            ctx.fillRect(x + size, y, size, size);
+                            ctx.fillRect(x, y + size, size, size);
+                        }
+                    }
+                } else {
+                    ctx.fillStyle = state.bgColor;
+                    ctx.fillRect(0, 0, targetW, targetH);
+                }
+
+                // Choose the source image layer (transparent cutout or original)
+                const sourceImg = (state.autoRemoveBg && state.bgRemovedImage) ? state.bgRemovedImage : state.rawImage;
+
+                // 3. Draw image centered and scaled using containment / cover logic for ID photos
+                // We want to fill the canvas horizontally or vertically with some margin for a perfect ID layout.
+                const imgRatio = sourceImg.naturalWidth / sourceImg.naturalHeight;
+                const canvasRatio = targetW / targetH;
+
+                let drawW, drawH, dx, dy;
+
+                if (imgRatio > canvasRatio) {
+                    // Image is wider than target size: fit height
+                    drawH = targetH;
+                    drawW = drawH * imgRatio;
+                    dx = (targetW - drawW) / 2;
+                    dy = 0;
+                } else {
+                    // Image is taller or matches: fit width
+                    drawW = targetW;
+                    drawH = drawW / imgRatio;
+                    dx = 0;
+                    dy = (targetH - drawH) / 2;
+                }
+
+                // 4. Save state to apply Canvas CSS Filters
+                ctx.save();
+
+                // Construct standard CSS dynamic filters
+                // Exposure is added as a small offset to brightness
+                const adjustedBrightness = Math.max(0, state.brightness + (state.exposure * 0.8));
+                let filterString = `brightness(${adjustedBrightness}%) contrast(${state.contrast}%) saturate(${state.saturation}%)`;
+                ctx.filter = filterString;
+
+                // Render image frame
+                ctx.drawImage(sourceImg, dx, dy, drawW, drawH);
+
+                // Apply Warmth manually if not 0 via colored tint multiply overlay
+                if (state.warmth !== 0) {
+                    ctx.globalCompositeOperation = 'multiply';
+                    if (state.warmth > 0) {
+                        // Warm: orange/yellow tint
+                        ctx.fillStyle = `rgba(245, 158, 11, ${state.warmth * 0.003})`;
+                    } else {
+                        // Cool: blue tint
+                        ctx.fillStyle = `rgba(59, 130, 246, ${Math.abs(state.warmth) * 0.003})`;
+                    }
+                    ctx.fillRect(0, 0, targetW, targetH);
+                }
+
+                ctx.restore();
+            }
+
+            // Download Handler
+            downloadBtn.addEventListener('click', () => {
+                if (!state.rawImage) return;
+
+                // Create a clean canvas without transparent checkerboard for export if transparent selected
+                const exportCanvas = document.createElement('canvas');
+                exportCanvas.width = state.selectedWidth;
+                exportCanvas.height = state.selectedHeight;
+                const expCtx = exportCanvas.getContext('2d');
+
+                // Draw solid background color
+                if (state.bgColor === 'transparent') {
+                    // Transparent PNG export
+                    expCtx.clearRect(0, 0, exportCanvas.width, exportCanvas.height);
+                } else {
+                    expCtx.fillStyle = state.bgColor;
+                    expCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+                }
+
+                const sourceImg = (state.autoRemoveBg && state.bgRemovedImage) ? state.bgRemovedImage : state.rawImage;
+                const imgRatio = sourceImg.naturalWidth / sourceImg.naturalHeight;
+                const canvasRatio = exportCanvas.width / exportCanvas.height;
+
+                let drawW, drawH, dx, dy;
+                if (imgRatio > canvasRatio) {
+                    drawH = exportCanvas.height;
+                    drawW = drawH * imgRatio;
+                    dx = (exportCanvas.width - drawW) / 2;
+                    dy = 0;
+                } else {
+                    drawW = exportCanvas.width;
+                    drawH = drawW / imgRatio;
+                    dx = 0;
+                    dy = (exportCanvas.height - drawH) / 2;
+                }
+
+                expCtx.save();
+                const adjustedBrightness = Math.max(0, state.brightness + (state.exposure * 0.8));
+                expCtx.filter = `brightness(${adjustedBrightness}%) contrast(${state.contrast}%) saturate(${state.saturation}%)`;
+
+                expCtx.drawImage(sourceImg, dx, dy, drawW, drawH);
+
+                if (state.warmth !== 0) {
+                    expCtx.globalCompositeOperation = 'multiply';
+                    if (state.warmth > 0) {
+                        expCtx.fillStyle = `rgba(245, 158, 11, ${state.warmth * 0.003})`;
+                    } else {
+                        expCtx.fillStyle = `rgba(59, 130, 246, ${Math.abs(state.warmth) * 0.003})`;
+                    }
+                    expCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+                }
+                expCtx.restore();
+
+                // Trigger actual download link
+                const format = exportFormat.value;
+                const quality = parseFloat(exportQuality.value);
+                const fileExt = format === 'image/jpeg' ? 'jpg' : 'png';
+                const link = document.createElement('a');
+                link.download = `AI-ID-Photo-${state.selectedWidth}x${state.selectedHeight}.${fileExt}`;
+                link.href = exportCanvas.toDataURL(format, quality);
+                link.click();
+            });
+
+            // If background model loaded after DOM, render image again
+            window.addEventListener('imgly-loaded', () => {
+                console.log("Model notification event fired.");
+                if (state.rawImage) {
+                    processNewImage();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
