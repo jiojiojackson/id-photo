@@ -126,25 +126,25 @@
                     <div id="guide-overlay" class="absolute inset-0 pointer-events-none select-none z-10">
                         <!-- Standard ID Photo Oval Guide -->
                         <svg class="w-full h-full" viewBox="0 0 300 400" xmlns="http://www.w3.org/2000/svg">
-                            <!-- Outer background semi-transparent mask -->
-                            <path d="M 0,0 L 300,0 L 300,400 L 0,400 Z M 150,210 C 105,210 75,160 75,110 C 75,60 105,35 150,35 C 195,35 225,60 225,110 C 225,160 195,210 150,210 Z" fill="rgba(15, 23, 42, 0.65)" fill-rule="evenodd"/>
+                            <!-- Outer background semi-transparent mask with head cutout conforming to the 5%-10% top margin, 60%-75% height proportion guidelines -->
+                            <path d="M 0,0 L 300,0 L 300,400 L 0,400 Z M 150,235 C 105,235 75,185 75,135 C 75,85 105,35 150,35 C 195,35 225,85 225,135 C 225,185 195,235 150,235 Z" fill="rgba(15, 23, 42, 0.65)" fill-rule="evenodd"/>
 
-                            <!-- Dashed oval for Head -->
-                            <ellipse cx="150" cy="120" rx="65" ry="85" fill="none" stroke="#6366f1" stroke-width="2.5" stroke-dasharray="6,4"/>
+                            <!-- Dashed oval for Head (Centered, 5%-10% top margin, 50% head height) -->
+                            <ellipse cx="150" cy="135" rx="75" ry="100" fill="none" stroke="#6366f1" stroke-width="2.5" stroke-dasharray="6,4"/>
 
                             <!-- Center horizontal & vertical lines -->
                             <line x1="150" y1="20" x2="150" y2="380" stroke="rgba(99, 102, 241, 0.3)" stroke-width="1" stroke-dasharray="4,4" />
-                            <line x1="20" y1="120" x2="280" y2="120" stroke="rgba(99, 102, 241, 0.3)" stroke-width="1" stroke-dasharray="4,4" />
+                            <line x1="20" y1="160" x2="280" y2="160" stroke="rgba(99, 102, 241, 0.3)" stroke-width="1" stroke-dasharray="4,4" />
 
-                            <!-- Eyes level guide -->
-                            <line x1="85" y1="105" x2="215" y2="105" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3,3" />
+                            <!-- Eyes level guide (located at exactly 40% of standard photo height) -->
+                            <line x1="75" y1="160" x2="225" y2="160" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3,3" />
 
-                            <!-- Chin level guide -->
-                            <line x1="100" y1="205" x2="200" y2="205" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3,3" />
+                            <!-- Chin level guide (located at exactly 58.75% of standard photo height) -->
+                            <line x1="90" y1="235" x2="210" y2="235" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3,3" />
 
-                            <!-- Shoulder guides -->
-                            <path d="M 55,320 Q 90,260 115,245" fill="none" stroke="#6366f1" stroke-width="2.5" />
-                            <path d="M 245,320 Q 210,260 185,245" fill="none" stroke="#6366f1" stroke-width="2.5" />
+                            <!-- Shoulder guides (exposing about 1/3~1/2 of upper shoulders symmetrically) -->
+                            <path d="M 40,340 Q 80,265 110,245" fill="none" stroke="#6366f1" stroke-width="2.5" />
+                            <path d="M 260,340 Q 220,265 190,245" fill="none" stroke="#6366f1" stroke-width="2.5" />
                         </svg>
 
                         <!-- Live Text Guide HUD -->
@@ -322,10 +322,55 @@
                     </div>
                 </div>
 
-                <!-- Section 3: Smart Tone Adjustment / Beauty -->
+                <!-- Section 3: Position & Scale Adjustments -->
+                <div>
+                    <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3"><i class="fa-solid fa-arrows-up-down-left-right text-indigo-500 mr-1.5"></i> 3. 人像位置与大小微调</h3>
+                    <div class="space-y-4 bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                        <!-- Zoom slider -->
+                        <div>
+                            <div class="flex justify-between text-[11px] font-bold mb-1 text-slate-600">
+                                <span><i class="fa-solid fa-magnifying-glass-plus mr-1"></i> 人像缩放 (Zoom)</span>
+                                <span id="val-zoom" class="text-indigo-600 font-black">100%</span>
+                            </div>
+                            <input type="range" id="slider-zoom" min="50" max="250" value="100" class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+                        </div>
+
+                        <!-- Pan X slider -->
+                        <div>
+                            <div class="flex justify-between text-[11px] font-bold mb-1 text-slate-600">
+                                <span><i class="fa-solid fa-left-right mr-1"></i> 左右平移 (Horizontal Pan)</span>
+                                <span id="val-pan-x" class="text-indigo-600 font-black">0%</span>
+                            </div>
+                            <input type="range" id="slider-pan-x" min="-50" max="50" value="0" class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+                        </div>
+
+                        <!-- Pan Y slider -->
+                        <div>
+                            <div class="flex justify-between text-[11px] font-bold mb-1 text-slate-600">
+                                <span><i class="fa-solid fa-up-down mr-1"></i> 上下平移 (Vertical Pan)</span>
+                                <span id="val-pan-y" class="text-indigo-600 font-black">0%</span>
+                            </div>
+                            <input type="range" id="slider-pan-y" min="-50" max="50" value="0" class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+                        </div>
+
+                        <!-- Toggle Guidelines -->
+                        <div class="flex items-center justify-between border-t border-slate-200/60 pt-3">
+                            <div>
+                                <span class="text-xs font-bold text-slate-700 block">显示裁剪辅助线</span>
+                                <span class="text-[10px] text-slate-400 font-medium">预览中显示完美证件照对齐参考虚线</span>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="show-canvas-guides" class="sr-only peer" checked>
+                                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 4: Smart Tone Adjustment / Beauty -->
                 <div>
                     <div class="flex justify-between items-center mb-3">
-                        <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-wider"><i class="fa-solid fa-sliders text-indigo-500 mr-1.5"></i> 3. 智能修图与美颜调色</h3>
+                        <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-wider"><i class="fa-solid fa-sliders text-indigo-500 mr-1.5"></i> 4. 智能修图与美颜调色</h3>
                         <button id="auto-beautify-btn" class="bg-indigo-50 hover:bg-indigo-100/80 text-indigo-700 border border-indigo-100 text-xs font-bold px-3 py-1.5 rounded-full transition flex items-center space-x-1.5 shadow-sm active:scale-95">
                             <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i>
                             <span>一键美颜</span>
@@ -387,7 +432,7 @@
                     </div>
                 </div>
 
-                <!-- Section 4: Export & Download -->
+                <!-- Section 5: Export & Download -->
                 <div class="border-t border-slate-200 pt-5">
                     <div class="grid grid-cols-2 gap-3.5 mb-4">
                         <div>
@@ -445,6 +490,10 @@
                 facingMode: 'user',       // user | environment
                 libLoaded: (typeof window.imglyRemoveBackground !== 'undefined'),
                 pendingProcessAfterLoad: false,
+                zoom: 100,                // zoom percentage (50% to 250%)
+                panX: 0,                  // pan X offset (-50% to 50%)
+                panY: 0,                  // pan Y offset (-50% to 50%)
+                showCanvasGuides: true,   // display perfect composition reference lines in preview
                 // Sliders
                 brightness: 100,
                 contrast: 100,
@@ -489,6 +538,16 @@
             const valSaturation = document.getElementById('val-saturation');
             const valExposure = document.getElementById('val-exposure');
             const valWarmth = document.getElementById('val-warmth');
+
+            // Position & Scale Sliders
+            const sliderZoom = document.getElementById('slider-zoom');
+            const sliderPanX = document.getElementById('slider-pan-x');
+            const sliderPanY = document.getElementById('slider-pan-y');
+            const showCanvasGuidesCheckbox = document.getElementById('show-canvas-guides');
+
+            const valZoom = document.getElementById('val-zoom');
+            const valPanX = document.getElementById('val-pan-x');
+            const valPanY = document.getElementById('val-pan-y');
 
             const autoBeautifyBtn = document.getElementById('auto-beautify-btn');
             const resetFiltersBtn = document.getElementById('reset-filters-btn');
@@ -705,9 +764,28 @@
                     alert("请先允许摄像头权限再进行拍摄！");
                     return;
                 }
+
+                const containerRatio = 3 / 4;
+                const videoW = video.videoWidth || 640;
+                const videoH = video.videoHeight || 480;
+                const videoRatio = videoW / videoH;
+
+                let sX = 0, sY = 0, sW = videoW, sH = videoH;
+
+                if (videoRatio > containerRatio) {
+                    // Video is wider than 3:4: crop left and right
+                    sW = videoH * containerRatio;
+                    sX = (videoW - sW) / 2;
+                } else {
+                    // Video is taller than 3:4: crop top and bottom
+                    sH = videoW / containerRatio;
+                    sY = (videoH - sH) / 2;
+                }
+
                 const captureCanvas = document.createElement('canvas');
-                captureCanvas.width = video.videoWidth || 640;
-                captureCanvas.height = video.videoHeight || 480;
+                // Use a high resolution 3:4 output to capture crisp details
+                captureCanvas.width = 1200;
+                captureCanvas.height = 1600;
                 const capCtx = captureCanvas.getContext('2d');
 
                 // Mirror horizontally only if current camera is front-facing (mirrored)
@@ -715,7 +793,9 @@
                     capCtx.translate(captureCanvas.width, 0);
                     capCtx.scale(-1, 1);
                 }
-                capCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
+
+                // Draw only the cropped 3:4 viewport region onto the capture canvas
+                capCtx.drawImage(video, sX, sY, sW, sH, 0, 0, captureCanvas.width, captureCanvas.height);
 
                 const img = new Image();
                 img.onload = () => {
@@ -791,6 +871,27 @@
                         }
                     }
                 });
+
+                // Position & Scale Sliders
+                const compSliders = [sliderZoom, sliderPanX, sliderPanY];
+                compSliders.forEach(slider => {
+                    if (slider) {
+                        slider.disabled = isProc || !hasImg;
+                        if (isProc || !hasImg) {
+                            slider.classList.add('opacity-50', 'cursor-not-allowed');
+                        } else {
+                            slider.classList.remove('opacity-50', 'cursor-not-allowed');
+                        }
+                    }
+                });
+                if (showCanvasGuidesCheckbox) {
+                    showCanvasGuidesCheckbox.disabled = isProc || !hasImg;
+                    if (isProc || !hasImg) {
+                        showCanvasGuidesCheckbox.parentElement.classList.add('opacity-50', 'cursor-not-allowed');
+                    } else {
+                        showCanvasGuidesCheckbox.parentElement.classList.remove('opacity-50', 'cursor-not-allowed');
+                    }
+                }
 
                 // 6. Beautify & Reset buttons
                 if (autoBeautifyBtn) {
@@ -1132,6 +1233,30 @@
             registerSlider(sliderExposure, valExposure, 'exposure', true);
             registerSlider(sliderWarmth, valWarmth, 'warmth', true);
 
+            // Position & Scale Sliders Event Listeners
+            sliderZoom.addEventListener('input', (e) => {
+                state.zoom = parseInt(e.target.value);
+                valZoom.textContent = `${state.zoom}%`;
+                renderProcessedImage();
+            });
+
+            sliderPanX.addEventListener('input', (e) => {
+                state.panX = parseInt(e.target.value);
+                valPanX.textContent = `${state.panX > 0 ? '+' : ''}${state.panX}%`;
+                renderProcessedImage();
+            });
+
+            sliderPanY.addEventListener('input', (e) => {
+                state.panY = parseInt(e.target.value);
+                valPanY.textContent = `${state.panY > 0 ? '+' : ''}${state.panY}%`;
+                renderProcessedImage();
+            });
+
+            showCanvasGuidesCheckbox.addEventListener('change', (e) => {
+                state.showCanvasGuides = e.target.checked;
+                renderProcessedImage();
+            });
+
             // One-click beautify (智能一键调色/美颜)
             autoBeautifyBtn.addEventListener('click', () => {
                 // Apply optimal values
@@ -1176,6 +1301,21 @@
                 valExposure.textContent = '0';
                 valWarmth.textContent = '0';
 
+                // Reset Composition Sliders
+                state.zoom = 100;
+                state.panX = 0;
+                state.panY = 0;
+                state.showCanvasGuides = true;
+
+                sliderZoom.value = 100;
+                sliderPanX.value = 0;
+                sliderPanY.value = 0;
+                showCanvasGuidesCheckbox.checked = true;
+
+                valZoom.textContent = '100%';
+                valPanX.textContent = '0%';
+                valPanY.textContent = '0%';
+
                 renderProcessedImage();
             });
 
@@ -1211,26 +1351,25 @@
                 // Choose the source image layer (transparent cutout or original)
                 const sourceImg = (state.autoRemoveBg && state.bgRemovedImage) ? state.bgRemovedImage : state.rawImage;
 
-                // 3. Draw image centered and scaled using containment / cover logic for ID photos
-                // We want to fill the canvas horizontally or vertically with some margin for a perfect ID layout.
+                // 3. Draw image centered, scaled, and translated using user-controlled composition logic
                 const imgRatio = sourceImg.naturalWidth / sourceImg.naturalHeight;
                 const canvasRatio = targetW / targetH;
 
-                let drawW, drawH, dx, dy;
-
+                let baseW, baseH;
                 if (imgRatio > canvasRatio) {
-                    // Image is wider than target size: fit height
-                    drawH = targetH;
-                    drawW = drawH * imgRatio;
-                    dx = (targetW - drawW) / 2;
-                    dy = 0;
+                    baseH = targetH;
+                    baseW = baseH * imgRatio;
                 } else {
-                    // Image is taller or matches: fit width
-                    drawW = targetW;
-                    drawH = drawW / imgRatio;
-                    dx = 0;
-                    dy = (targetH - drawH) / 2;
+                    baseW = targetW;
+                    baseH = baseW / imgRatio;
                 }
+
+                const scale = state.zoom / 100;
+                const drawW = baseW * scale;
+                const drawH = baseH * scale;
+
+                const dx = (targetW - drawW) / 2 + (state.panX / 100 * targetW);
+                const dy = (targetH - drawH) / 2 + (state.panY / 100 * targetH);
 
                 // 4. Save state to apply Canvas CSS Filters
                 ctx.save();
@@ -1258,6 +1397,56 @@
                 }
 
                 ctx.restore();
+
+                // 5. Optionally draw the dynamic alignment guide lines (Preview Canvas ONLY)
+                if (state.showCanvasGuides) {
+                    ctx.save();
+
+                    // Head oval (cy = 33.75% of H, ry = 25% of H, rx = 75% of ry, top margin gap at 8.75% of H)
+                    const cx = targetW / 2;
+                    const cy = 0.3375 * targetH;
+                    const ry = 0.25 * targetH;
+                    const rx = ry * 0.75;
+
+                    ctx.strokeStyle = '#f59e0b';
+                    ctx.lineWidth = Math.max(1.5, targetW / 200);
+                    ctx.setLineDash([4, 4]);
+
+                    // Oval Head Guide
+                    ctx.beginPath();
+                    ctx.ellipse(cx, cy, rx, ry, 0, 0, 2 * Math.PI);
+                    ctx.stroke();
+
+                    // Center horizontal (Eyes level at exactly 40% of photo height)
+                    ctx.strokeStyle = '#f59e0b';
+                    const eyesY = 0.40 * targetH;
+                    ctx.beginPath();
+                    ctx.moveTo(cx - rx, eyesY);
+                    ctx.lineTo(cx + rx, eyesY);
+                    ctx.stroke();
+
+                    // Chin level guide line (located at exactly 58.75% of standard photo height)
+                    ctx.strokeStyle = '#f59e0b';
+                    const chinY = 0.5875 * targetH;
+                    ctx.beginPath();
+                    ctx.moveTo(cx - rx * 0.8, chinY);
+                    ctx.lineTo(cx + rx * 0.8, chinY);
+                    ctx.stroke();
+
+                    // Symmetrical upper shoulder guides
+                    ctx.strokeStyle = 'rgba(99, 102, 241, 0.7)';
+                    ctx.lineWidth = Math.max(2.0, targetW / 150);
+                    ctx.beginPath();
+                    // Left shoulder
+                    ctx.moveTo(0.13 * targetW, 0.85 * targetH);
+                    ctx.quadraticCurveTo(0.26 * targetW, 0.66 * targetH, 0.37 * targetW, 0.61 * targetH);
+                    // Right shoulder
+                    ctx.moveTo(0.87 * targetW, 0.85 * targetH);
+                    ctx.quadraticCurveTo(0.74 * targetW, 0.66 * targetH, 0.63 * targetW, 0.61 * targetH);
+                    ctx.stroke();
+
+                    ctx.restore();
+                }
             }
 
             // Download Handler
@@ -1283,18 +1472,21 @@
                 const imgRatio = sourceImg.naturalWidth / sourceImg.naturalHeight;
                 const canvasRatio = exportCanvas.width / exportCanvas.height;
 
-                let drawW, drawH, dx, dy;
+                let baseW, baseH;
                 if (imgRatio > canvasRatio) {
-                    drawH = exportCanvas.height;
-                    drawW = drawH * imgRatio;
-                    dx = (exportCanvas.width - drawW) / 2;
-                    dy = 0;
+                    baseH = exportCanvas.height;
+                    baseW = baseH * imgRatio;
                 } else {
-                    drawW = exportCanvas.width;
-                    drawH = drawW / imgRatio;
-                    dx = 0;
-                    dy = (exportCanvas.height - drawH) / 2;
+                    baseW = exportCanvas.width;
+                    baseH = baseW / imgRatio;
                 }
+
+                const scale = state.zoom / 100;
+                const drawW = baseW * scale;
+                const drawH = baseH * scale;
+
+                const dx = (exportCanvas.width - drawW) / 2 + (state.panX / 100 * exportCanvas.width);
+                const dy = (exportCanvas.height - drawH) / 2 + (state.panY / 100 * exportCanvas.height);
 
                 expCtx.save();
                 const adjustedBrightness = Math.max(0, state.brightness + (state.exposure * 0.8));
