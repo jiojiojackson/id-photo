@@ -216,16 +216,40 @@
                     <div class="grid grid-cols-3 gap-2.5">
                         <button id="btn-size-1inch" data-width="295" data-height="413" class="size-preset-btn border-2 border-indigo-500 bg-indigo-50/50 text-indigo-900 px-3 py-3 rounded-2xl font-bold text-xs flex flex-col items-center justify-center transition shadow-sm">
                             <span class="text-xs font-black">一寸</span>
-                            <span class="text-[10px] text-indigo-600/80 mt-1 font-bold">295 × 413 px</span>
+                            <span class="text-[10px] text-indigo-600/80 mt-1 font-bold">25 × 35 mm</span>
                         </button>
                         <button id="btn-size-2inch" data-width="413" data-height="579" class="size-preset-btn border border-slate-200 hover:border-slate-300 text-slate-700 px-3 py-3 rounded-2xl font-bold text-xs flex flex-col items-center justify-center transition hover:bg-slate-50">
                             <span class="text-xs font-black">二寸</span>
-                            <span class="text-[10px] text-slate-400 mt-1">413 × 579 px</span>
+                            <span class="text-[10px] text-slate-400 mt-1">35 × 49 mm</span>
                         </button>
                         <button id="btn-size-custom" data-width="390" data-height="567" class="size-preset-btn border border-slate-200 hover:border-slate-300 text-slate-700 px-3 py-3 rounded-2xl font-bold text-xs flex flex-col items-center justify-center transition hover:bg-slate-50">
                             <span class="text-xs font-black">自定义 / 护照</span>
-                            <span class="text-[10px] text-slate-400 mt-1">390 × 567 px</span>
+                            <span class="text-[10px] text-slate-400 mt-1">33 × 48 mm</span>
                         </button>
+                    </div>
+
+                    <!-- 自定义毫米尺寸输入区域 -->
+                    <div class="mt-3.5 p-3.5 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col gap-2.5">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[11px] font-bold text-slate-500"><i class="fa-solid fa-arrows-left-right text-indigo-500 mr-1"></i> 自定义毫米尺寸 (300 DPI)</span>
+                            <span id="custom-px-preview" class="text-[10px] font-bold text-indigo-600">295 × 413 px</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2.5 items-center">
+                            <div class="flex items-center bg-white border border-slate-200 rounded-xl px-2.5 py-2 shadow-sm focus-within:ring-2 focus-within:ring-indigo-500/20 transition">
+                                <span class="text-[10px] font-bold text-slate-400 mr-1.5">宽</span>
+                                <input type="number" id="custom-mm-width" min="10" max="300" value="25" class="w-full text-xs font-bold text-slate-700 focus:outline-none bg-transparent">
+                                <span class="text-[10px] font-semibold text-slate-400 ml-1">mm</span>
+                            </div>
+                            <div class="flex items-center bg-white border border-slate-200 rounded-xl px-2.5 py-2 shadow-sm focus-within:ring-2 focus-within:ring-indigo-500/20 transition">
+                                <span class="text-[10px] font-bold text-slate-400 mr-1.5">高</span>
+                                <input type="number" id="custom-mm-height" min="10" max="300" value="35" class="w-full text-xs font-bold text-slate-700 focus:outline-none bg-transparent">
+                                <span class="text-[10px] font-semibold text-slate-400 ml-1">mm</span>
+                            </div>
+                            <button id="btn-apply-custom-size" class="h-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-sm hover:shadow transition-all duration-200 py-2 active:scale-95 flex items-center justify-center gap-1">
+                                <i class="fa-solid fa-check text-[10px]"></i>
+                                <span>应用尺寸</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -419,6 +443,8 @@
                 currentDeviceIndex: 0,
                 devices: [],
                 facingMode: 'user',       // user | environment
+                libLoaded: (typeof window.imglyRemoveBackground !== 'undefined'),
+                pendingProcessAfterLoad: false,
                 // Sliders
                 brightness: 100,
                 contrast: 100,
@@ -468,6 +494,12 @@
             const resetFiltersBtn = document.getElementById('reset-filters-btn');
             const exportFormat = document.getElementById('export-format');
             const exportQuality = document.getElementById('export-quality');
+
+            // Custom Size elements
+            const customMmWidth = document.getElementById('custom-mm-width');
+            const customMmHeight = document.getElementById('custom-mm-height');
+            const customPxPreview = document.getElementById('custom-px-preview');
+            const btnApplyCustomSize = document.getElementById('btn-apply-custom-size');
 
             // Set current canvas context
             const ctx = previewCanvas.getContext('2d');
@@ -522,6 +554,17 @@
                 stopCamera();
                 cameraErrorOverlay.classList.add('hidden');
 
+                // Set loading UI state for capture button
+                if (captureBtn) {
+                    captureBtn.disabled = true;
+                    captureBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    captureBtn.innerHTML = '<i class="fa-solid fa-circle-notch animate-spin"></i>';
+                    const btnLabel = captureBtn.nextElementSibling;
+                    if (btnLabel) {
+                        btnLabel.textContent = "相机启动中...";
+                    }
+                }
+
                 const selectedId = cameraSelect.value;
                 const constraints = {
                     video: {},
@@ -555,13 +598,37 @@
                     }
 
                     // Safari / iOS compatibility: play explicitly
-                    video.play().catch(e => {
+                    try {
+                        await video.play();
+                    } catch (e) {
                         console.log("Auto-play blocked or interrupted:", e);
-                    });
+                    }
+
+                    // Restore normal active state for capture button
+                    if (captureBtn) {
+                        captureBtn.disabled = false;
+                        captureBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                        captureBtn.innerHTML = '<i class="fa-solid fa-camera transition-transform group-hover:rotate-12"></i>';
+                        const btnLabel = captureBtn.nextElementSibling;
+                        if (btnLabel) {
+                            btnLabel.textContent = "按下快门拍照";
+                        }
+                    }
 
                 } catch (err) {
                     console.error("Error opening camera:", err);
                     cameraErrorOverlay.classList.remove('hidden');
+
+                    // Set failed state for capture button
+                    if (captureBtn) {
+                        captureBtn.disabled = true;
+                        captureBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                        captureBtn.innerHTML = '<i class="fa-solid fa-video-slash"></i>';
+                        const btnLabel = captureBtn.nextElementSibling;
+                        if (btnLabel) {
+                            btnLabel.textContent = "相机开启失败";
+                        }
+                    }
                 }
             }
 
@@ -661,17 +728,163 @@
                 img.src = captureCanvas.toDataURL('image/png');
             });
 
+            // updateUIInteractiveState dynamically disables/enables and grays out elements based on state
+            function updateUIInteractiveState() {
+                const isProc = state.isProcessing;
+                const hasImg = !!state.rawImage;
+                const isLibReady = !!state.libLoaded;
+
+                // 1. Predefined Preset Buttons
+                document.querySelectorAll('.size-preset-btn').forEach(btn => {
+                    btn.disabled = isProc;
+                    if (isProc) {
+                        btn.classList.add('opacity-50', 'cursor-not-allowed');
+                    } else {
+                        btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    }
+                });
+
+                // 2. Custom dimensions inputs & apply button
+                if (customMmWidth) customMmWidth.disabled = isProc;
+                if (customMmHeight) customMmHeight.disabled = isProc;
+                if (btnApplyCustomSize) {
+                    btnApplyCustomSize.disabled = isProc;
+                    if (isProc) {
+                        btnApplyCustomSize.classList.add('opacity-50', 'cursor-not-allowed');
+                    } else {
+                        btnApplyCustomSize.classList.remove('opacity-50', 'cursor-not-allowed');
+                    }
+                }
+
+                // 3. Color Swatches
+                document.querySelectorAll('.bg-swatch').forEach(btn => {
+                    btn.disabled = isProc || !hasImg;
+                    if (isProc || !hasImg) {
+                        btn.classList.add('opacity-40', 'cursor-not-allowed');
+                    } else {
+                        btn.classList.remove('opacity-40', 'cursor-not-allowed');
+                    }
+                });
+
+                // 4. Custom Color Picker
+                if (customColorPicker) {
+                    customColorPicker.disabled = isProc || !hasImg;
+                    const pickerParent = customColorPicker.parentElement;
+                    if (pickerParent) {
+                        if (isProc || !hasImg) {
+                            pickerParent.classList.add('opacity-50', 'cursor-not-allowed');
+                        } else {
+                            pickerParent.classList.remove('opacity-50', 'cursor-not-allowed');
+                        }
+                    }
+                }
+
+                // 5. Sliders (Brightness, Contrast, Saturation, Exposure, Warmth)
+                const sliders = [sliderBrightness, sliderContrast, sliderSaturation, sliderExposure, sliderWarmth];
+                sliders.forEach(slider => {
+                    if (slider) {
+                        slider.disabled = isProc || !hasImg;
+                        if (isProc || !hasImg) {
+                            slider.classList.add('opacity-50', 'cursor-not-allowed');
+                        } else {
+                            slider.classList.remove('opacity-50', 'cursor-not-allowed');
+                        }
+                    }
+                });
+
+                // 6. Beautify & Reset buttons
+                if (autoBeautifyBtn) {
+                    autoBeautifyBtn.disabled = isProc || !hasImg;
+                    if (isProc || !hasImg) {
+                        autoBeautifyBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    } else {
+                        autoBeautifyBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    }
+                }
+                if (resetFiltersBtn) {
+                    resetFiltersBtn.disabled = isProc || !hasImg;
+                    if (isProc || !hasImg) {
+                        resetFiltersBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    } else {
+                        resetFiltersBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    }
+                }
+
+                // 7. Auto Remove BG Toggle
+                if (autoRemoveBgToggle) {
+                    if (!isLibReady) {
+                        autoRemoveBgToggle.disabled = true;
+                        autoRemoveBgToggle.parentElement.classList.add('opacity-50', 'cursor-not-allowed');
+                        const toggleLabel = autoRemoveBgToggle.parentElement.previousElementSibling;
+                        if (toggleLabel && !toggleLabel.querySelector('.loader-text')) {
+                            const loaderSpan = document.createElement('span');
+                            loaderSpan.className = "loader-text text-[10px] text-indigo-500 font-bold block animate-pulse mt-0.5";
+                            loaderSpan.textContent = "⏳ 正在载入 AI 抠图引擎...";
+                            toggleLabel.appendChild(loaderSpan);
+                        }
+                    } else {
+                        autoRemoveBgToggle.disabled = isProc;
+                        autoRemoveBgToggle.parentElement.classList.remove('opacity-50', 'cursor-not-allowed');
+                        const loaderText = autoRemoveBgToggle.parentElement.previousElementSibling?.querySelector('.loader-text');
+                        if (loaderText) {
+                            loaderText.remove();
+                        }
+                    }
+                }
+
+                // 8. Capture and Upload Buttons
+                if (captureBtn) {
+                    captureBtn.disabled = isProc;
+                    if (isProc) {
+                        captureBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    } else {
+                        captureBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    }
+                }
+                const selectFileBtn = document.querySelector('#content-upload button');
+                if (selectFileBtn) {
+                    selectFileBtn.disabled = isProc;
+                    if (isProc) {
+                        selectFileBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    } else {
+                        selectFileBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    }
+                }
+
+                // 9. Download Button
+                if (downloadBtn) {
+                    downloadBtn.disabled = isProc || !hasImg;
+                    if (isProc || !hasImg) {
+                        downloadBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    } else {
+                        downloadBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    }
+                }
+
+                // 10. Export options
+                if (exportFormat) exportFormat.disabled = isProc || !hasImg;
+                if (exportQuality) exportQuality.disabled = isProc || !hasImg;
+            }
+
             // Process new image (run background removal)
             async function processNewImage() {
                 if (!state.rawImage) return;
 
                 canvasPlaceholder.classList.add('hidden');
-                downloadBtn.removeAttribute('disabled');
+                updateUIInteractiveState();
 
                 if (state.autoRemoveBg) {
+                    if (!state.libLoaded) {
+                        state.pendingProcessAfterLoad = true;
+                        showProcessing(true);
+                        aiLoading.classList.remove('hidden');
+                        updateProgress(30, "⏳ AI 抠图引擎正在首次加载中，请稍候...");
+                        return;
+                    }
                     await removeImageBackground();
                 } else {
                     renderProcessedImage();
+                    updateUIInteractiveState();
                 }
             }
 
@@ -743,6 +956,7 @@
                     processingStatus.classList.add('hidden');
                     processingStatus.classList.remove('flex');
                 }
+                updateUIInteractiveState();
             }
 
             // Event Listeners for Color presets
@@ -791,6 +1005,29 @@
                 processNewImage();
             });
 
+            // mm to px conversion helper (at 300 DPI)
+            function mmToPx(mm) {
+                return Math.round((parseFloat(mm) || 0) / 25.4 * 300);
+            }
+
+            function updateCustomPxPreview() {
+                const wMm = parseFloat(customMmWidth.value) || 0;
+                const hMm = parseFloat(customMmHeight.value) || 0;
+                const wPx = mmToPx(wMm);
+                const hPx = mmToPx(hMm);
+                customPxPreview.textContent = `${wPx} × ${hPx} px`;
+            }
+
+            customMmWidth.addEventListener('input', updateCustomPxPreview);
+            customMmHeight.addEventListener('input', updateCustomPxPreview);
+
+            // Preset mapping for millimeter syncing
+            const presetMmMapping = {
+                'btn-size-1inch': { w: 25, h: 35 },
+                'btn-size-2inch': { w: 35, h: 49 },
+                'btn-size-custom': { w: 33, h: 48 }
+            };
+
             // Specification/Size buttons
             document.querySelectorAll('.size-preset-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
@@ -815,8 +1052,68 @@
                     previewCanvas.width = state.selectedWidth;
                     previewCanvas.height = state.selectedHeight;
 
+                    // Sync millimeters inputs
+                    const mapping = presetMmMapping[selected.id];
+                    if (mapping) {
+                        customMmWidth.value = mapping.w;
+                        customMmHeight.value = mapping.h;
+                        updateCustomPxPreview();
+                    }
+
                     renderProcessedImage();
                 });
+            });
+
+            // Apply Custom Size click handler
+            btnApplyCustomSize.addEventListener('click', () => {
+                const wMm = parseFloat(customMmWidth.value) || 0;
+                const hMm = parseFloat(customMmHeight.value) || 0;
+
+                if (wMm < 10 || hMm < 10) {
+                    alert("尺寸不能小于 10 毫米！");
+                    return;
+                }
+                if (wMm > 500 || hMm > 500) {
+                    alert("尺寸不能大于 500 毫米！");
+                    return;
+                }
+
+                const wPx = mmToPx(wMm);
+                const hPx = mmToPx(hMm);
+
+                state.selectedWidth = wPx;
+                state.selectedHeight = hPx;
+
+                previewCanvas.width = wPx;
+                previewCanvas.height = hPx;
+
+                // De-activate other preset buttons visually
+                document.querySelectorAll('.size-preset-btn').forEach(b => {
+                    b.className = "size-preset-btn border border-slate-200 hover:border-slate-300 text-slate-700 px-3 py-3 rounded-2xl font-bold text-xs flex flex-col items-center justify-center transition hover:bg-slate-50";
+                    const textSpan = b.querySelector('span:last-child');
+                    if (textSpan) {
+                        textSpan.className = "text-[10px] text-slate-400 mt-1";
+                    }
+                });
+
+                // Highlight preset if it perfectly matches
+                let matchedPresetBtnId = null;
+                if (wPx === 295 && hPx === 413) matchedPresetBtnId = 'btn-size-1inch';
+                else if (wPx === 413 && hPx === 579) matchedPresetBtnId = 'btn-size-2inch';
+                else if (wPx === 390 && hPx === 567) matchedPresetBtnId = 'btn-size-custom';
+
+                if (matchedPresetBtnId) {
+                    const matchedBtn = document.getElementById(matchedPresetBtnId);
+                    if (matchedBtn) {
+                        matchedBtn.className = "size-preset-btn border-2 border-indigo-500 bg-indigo-50/50 text-indigo-900 px-3 py-3 rounded-2xl font-bold text-xs flex flex-col items-center justify-center transition shadow-sm";
+                        const spanSubText = matchedBtn.querySelector('span:last-child');
+                        if (spanSubText) {
+                            spanSubText.className = "text-[10px] text-indigo-600/80 mt-1 font-bold";
+                        }
+                    }
+                }
+
+                renderProcessedImage();
             });
 
             // Slider update events
@@ -1016,20 +1313,43 @@
                 }
                 expCtx.restore();
 
-                // Trigger actual download link
+                // Trigger actual download link via Blob for high security/compatibility
                 const format = exportFormat.value;
                 const quality = parseFloat(exportQuality.value);
                 const fileExt = format === 'image/jpeg' ? 'jpg' : 'png';
-                const link = document.createElement('a');
-                link.download = `AI-ID-Photo-${state.selectedWidth}x${state.selectedHeight}.${fileExt}`;
-                link.href = exportCanvas.toDataURL(format, quality);
-                link.click();
+
+                exportCanvas.toBlob((blob) => {
+                    if (!blob) {
+                        alert("图片生成失败！");
+                        return;
+                    }
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.download = `AI-ID-Photo-${state.selectedWidth}x${state.selectedHeight}.${fileExt}`;
+                    link.href = url;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+
+                    // Revoke object URL later to release memory
+                    setTimeout(() => {
+                        URL.revokeObjectURL(url);
+                    }, 100);
+                }, format, quality);
             });
+
+            // Initial call to set correct visual state
+            updateUIInteractiveState();
 
             // If background model loaded after DOM, render image again
             window.addEventListener('imgly-loaded', () => {
                 console.log("Model notification event fired.");
-                if (state.rawImage) {
+                state.libLoaded = true;
+                updateUIInteractiveState();
+                if (state.pendingProcessAfterLoad) {
+                    state.pendingProcessAfterLoad = false;
+                    processNewImage();
+                } else if (state.rawImage) {
                     processNewImage();
                 }
             });
