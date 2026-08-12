@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>智能证件照制作工具 | AI 自助拍照与换底</title>
     <!-- COI Service Worker at the absolute top of head -->
     <script src="coi-serviceworker.js"></script>
@@ -37,7 +37,7 @@
         window.dispatchEvent(new CustomEvent('imgly-loaded'));
     </script>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans">
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans antialiased">
 
     <!-- Header -->
     <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
@@ -47,13 +47,13 @@
                     <i class="fa-solid fa-camera-rotate text-lg"></i>
                 </div>
                 <div>
-                    <h1 class="text-lg font-bold text-slate-900 tracking-tight flex items-center">
+                    <h1 class="text-base sm:text-lg font-bold text-slate-900 tracking-tight flex items-center">
                         AI 智能证件照大师
                         <span class="ml-2 px-1.5 py-0.5 bg-green-100 text-green-800 text-[10px] font-semibold rounded-md border border-green-200">
-                            本地安全处理
+                            全本地安全处理
                         </span>
                     </h1>
-                    <p class="text-[11px] text-slate-500">100% 隐私安全，照片无需上传服务器</p>
+                    <p class="text-[10px] sm:text-[11px] text-slate-500">100% 隐私安全，照片无需上传服务器</p>
                 </div>
             </div>
             <div class="flex items-center space-x-2">
@@ -68,7 +68,7 @@
     <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col lg:flex-row gap-6">
 
         <!-- Left Column: Camera and Input -->
-        <div class="flex-1 flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden min-h-[500px]">
+        <div class="flex-1 flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden min-h-[480px]">
             <!-- Tab Headers -->
             <div class="flex border-b border-slate-200 bg-slate-50">
                 <button id="tab-camera" class="flex-1 py-3.5 px-4 font-semibold text-sm border-b-2 border-brand-600 text-brand-600 flex items-center justify-center space-x-2 bg-white transition">
@@ -82,24 +82,24 @@
             </div>
 
             <!-- Tab Content: Camera View -->
-            <div id="content-camera" class="flex-grow p-6 flex flex-col justify-between items-center relative">
+            <div id="content-camera" class="flex-grow p-4 sm:p-6 flex flex-col justify-between items-center relative">
                 <!-- Camera Select & Action Bar -->
-                <div class="w-full flex flex-wrap justify-between items-center gap-3 mb-4 z-10">
-                    <div class="flex items-center space-x-2">
-                        <span class="text-xs text-slate-500 font-medium"><i class="fa-solid fa-video mr-1"></i> 摄像头：</span>
-                        <select id="camera-select" class="text-xs bg-slate-100 border border-slate-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-brand-500 text-slate-700 min-w-[150px]">
+                <div class="w-full flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 mb-4 z-10">
+                    <div class="flex items-center justify-between sm:justify-start space-x-2">
+                        <span class="text-xs text-slate-500 font-medium whitespace-nowrap"><i class="fa-solid fa-video mr-1"></i> 摄像头选择：</span>
+                        <select id="camera-select" class="text-xs bg-slate-100 border border-slate-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-brand-500 text-slate-700 min-w-[140px] max-w-full">
                             <option value="">正在检测镜头...</option>
                         </select>
                     </div>
-                    <button id="switch-camera-btn" class="text-xs bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-medium px-3 py-1.5 rounded-lg transition flex items-center space-x-1">
+                    <button id="switch-camera-btn" class="text-xs bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-medium px-3 py-2 sm:py-1.5 rounded-lg transition flex items-center justify-center space-x-1">
                         <i class="fa-solid fa-rotate"></i>
-                        <span>切换前后镜头</span>
+                        <span>切换前后摄像头</span>
                     </button>
                 </div>
 
                 <!-- Video viewport with Assist Overlay -->
                 <div class="relative bg-slate-900 rounded-xl overflow-hidden aspect-[3/4] w-full max-w-[320px] shadow-inner flex items-center justify-center border border-slate-800 group">
-                    <video id="video" autoplay playsinline class="w-full h-full object-cover scale-x-[-1]"></video>
+                    <video id="video" autoplay playsinline muted class="w-full h-full object-cover"></video>
 
                     <!-- Guidance Line Overlays (SVG) -->
                     <div id="guide-overlay" class="absolute inset-0 pointer-events-none select-none z-10">
@@ -140,7 +140,7 @@
                             <i class="fa-solid fa-triangle-exclamation"></i>
                         </div>
                         <h4 class="text-white font-semibold text-sm mb-1">无法访问您的摄像头</h4>
-                        <p class="text-slate-400 text-xs max-w-[240px] mb-4">请确保已授予摄像头访问权限，或使用右侧“上传照片”标签上传本地相册照片。</p>
+                        <p class="text-slate-400 text-xs max-w-[240px] mb-4">请确保已授予摄像头访问权限。在手机上，请使用内置 Safari、Chrome 浏览器并允许摄像头授权。</p>
                         <button id="retry-camera-btn" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition">
                             重新尝试开启相机
                         </button>
@@ -149,7 +149,7 @@
 
                 <!-- Capture controls -->
                 <div class="w-full flex flex-col items-center mt-6">
-                    <button id="capture-btn" class="w-20 h-20 rounded-full border-4 border-slate-200 bg-brand-600 hover:bg-brand-500 transition-all transform hover:scale-105 active:scale-95 shadow-lg shadow-brand-500/30 flex items-center justify-center text-white text-xl">
+                    <button id="capture-btn" class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-slate-200 bg-brand-600 hover:bg-brand-500 transition-all transform hover:scale-105 active:scale-95 shadow-lg shadow-brand-500/30 flex items-center justify-center text-white text-xl">
                         <i class="fa-solid fa-camera"></i>
                     </button>
                     <p class="text-xs text-slate-400 mt-2 font-medium">按下进行快门拍照</p>
@@ -187,7 +187,7 @@
                 </div>
             </div>
 
-            <div class="p-6 flex flex-col gap-6 overflow-y-auto max-h-[80vh]">
+            <div class="p-4 sm:p-6 flex flex-col gap-6 overflow-y-auto max-h-[80vh]">
 
                 <!-- Section 1: ID Photo Specification Preset -->
                 <div>
@@ -356,9 +356,9 @@
                         <div>
                             <label class="block text-xs font-semibold text-slate-500 mb-1.5">文件大小控制</label>
                             <select id="export-quality" class="w-full text-xs bg-white border border-slate-300 rounded-lg px-2.5 py-2 focus:outline-none focus:ring-1 focus:ring-brand-500 text-slate-700">
-                                <option value="0.95" selected>超清画质 (High Quality)</option>
-                                <option value="0.80">标准画质 (Medium Quality)</option>
-                                <option value="0.60">压缩画质 (Low Quality)</option>
+                                <option value="0.95" selected>超清画质 (High)</option>
+                                <option value="0.80">标准画质 (Medium)</option>
+                                <option value="0.60">压缩画质 (Low)</option>
                             </select>
                         </div>
                     </div>
@@ -398,6 +398,7 @@
                 isProcessing: false,
                 currentDeviceIndex: 0,
                 devices: [],
+                facingMode: 'user',       // user | environment
                 // Sliders
                 brightness: 100,
                 contrast: 100,
@@ -501,15 +502,43 @@
                 stopCamera();
                 cameraErrorOverlay.classList.add('hidden');
 
-                const deviceId = cameraSelect.value;
+                const selectedId = cameraSelect.value;
                 const constraints = {
-                    video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'user' },
+                    video: {},
                     audio: false
                 };
+
+                if (selectedId) {
+                    constraints.video.deviceId = { exact: selectedId };
+                } else {
+                    constraints.video.facingMode = state.facingMode;
+                }
 
                 try {
                     state.stream = await navigator.mediaDevices.getUserMedia(constraints);
                     video.srcObject = state.stream;
+
+                    // Determine if the active track is front facing to apply mirroring
+                    const track = state.stream.getVideoTracks()[0];
+                    if (track) {
+                        const label = track.label.toLowerCase();
+                        const settings = track.getSettings ? track.getSettings() : {};
+
+                        // If facingMode setting is 'user' or label suggests front camera, apply mirror effect
+                        if (settings.facingMode === 'user' || label.includes('front') || label.includes('facetime') || label.includes('selfie') || !selectedId) {
+                            video.style.transform = 'scaleX(-1)';
+                            state.isMirrored = true;
+                        } else {
+                            video.style.transform = 'none';
+                            state.isMirrored = false;
+                        }
+                    }
+
+                    // Safari / iOS compatibility: play explicitly
+                    video.play().catch(e => {
+                        console.log("Auto-play blocked or interrupted:", e);
+                    });
+
                 } catch (err) {
                     console.error("Error opening camera:", err);
                     cameraErrorOverlay.classList.remove('hidden');
@@ -526,15 +555,16 @@
             cameraSelect.addEventListener('change', startCamera);
             retryCameraBtn.addEventListener('click', startCamera);
 
-            // Switch camera btn
+            // Switch camera btn (toggles between facingMode or steps through devices list)
             switchCameraBtn.addEventListener('click', async () => {
                 if (state.devices.length > 1) {
                     state.currentDeviceIndex = (state.currentDeviceIndex + 1) % state.devices.length;
                     cameraSelect.value = state.devices[state.currentDeviceIndex].deviceId;
                     await startCamera();
                 } else {
-                    // Try to toggle facingMode directly
-                    alert("检测到单摄像头，如果使用的是移动端，已自动切换对准方向！");
+                    // Direct facingMode toggle
+                    state.facingMode = (state.facingMode === 'user') ? 'environment' : 'user';
+                    await startCamera();
                 }
             });
 
@@ -593,9 +623,11 @@
                 captureCanvas.height = video.videoHeight || 480;
                 const capCtx = captureCanvas.getContext('2d');
 
-                // Flip horizontally since video is flipped scale-x-[-1]
-                capCtx.translate(captureCanvas.width, 0);
-                capCtx.scale(-1, 1);
+                // Mirror horizontally only if current camera is front-facing (mirrored)
+                if (state.isMirrored) {
+                    capCtx.translate(captureCanvas.width, 0);
+                    capCtx.scale(-1, 1);
+                }
                 capCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
 
                 const img = new Image();
@@ -603,7 +635,7 @@
                     state.rawImage = img;
                     state.bgRemovedImage = null; // Clear old cache
                     processNewImage();
-                    // Optional switch to right settings column focus on mobile
+                    // Smooth scroll to preview panel for better mobile UX
                     previewCanvas.scrollIntoView({ behavior: 'smooth' });
                 };
                 img.src = captureCanvas.toDataURL('image/png');
