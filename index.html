@@ -126,25 +126,25 @@
                     <div id="guide-overlay" class="absolute inset-0 pointer-events-none select-none z-10">
                         <!-- Standard ID Photo Oval Guide -->
                         <svg class="w-full h-full" viewBox="0 0 300 400" xmlns="http://www.w3.org/2000/svg">
-                            <!-- Outer background semi-transparent mask with head cutout conforming to the 5%-10% top margin, 60%-75% height proportion guidelines -->
-                            <path d="M 0,0 L 300,0 L 300,400 L 0,400 Z M 150,235 C 105,235 75,185 75,135 C 75,85 105,35 150,35 C 195,35 225,85 225,135 C 225,185 195,235 150,235 Z" fill="rgba(15, 23, 42, 0.65)" fill-rule="evenodd"/>
+                            <!-- Outer background semi-transparent mask with head cutout conforming to the 5%-10% top margin, 60%-75% height proportion guidelines based on standard photo ratios -->
+                            <path d="M 0,0 L 300,0 L 300,400 L 0,400 Z M 150,252 C 105,252 70,199 70,146 C 70,93 105,40 150,40 C 195,40 230,93 230,146 C 230,199 195,252 150,252 Z" fill="rgba(15, 23, 42, 0.65)" fill-rule="evenodd"/>
 
-                            <!-- Dashed oval for Head (Centered, 5%-10% top margin, 50% head height) -->
-                            <ellipse cx="150" cy="135" rx="75" ry="100" fill="none" stroke="#6366f1" stroke-width="2.5" stroke-dasharray="6,4"/>
+                            <!-- Dashed oval for Head (Centered, 10% top margin, 53% head height) -->
+                            <ellipse cx="150" cy="146" rx="80" ry="106" fill="none" stroke="#6366f1" stroke-width="2.5" stroke-dasharray="6,4"/>
 
                             <!-- Center horizontal & vertical lines -->
                             <line x1="150" y1="20" x2="150" y2="380" stroke="rgba(99, 102, 241, 0.3)" stroke-width="1" stroke-dasharray="4,4" />
-                            <line x1="20" y1="160" x2="280" y2="160" stroke="rgba(99, 102, 241, 0.3)" stroke-width="1" stroke-dasharray="4,4" />
+                            <line x1="20" y1="153" x2="280" y2="153" stroke="rgba(99, 102, 241, 0.3)" stroke-width="1" stroke-dasharray="4,4" />
 
-                            <!-- Eyes level guide (located at exactly 40% of standard photo height) -->
-                            <line x1="75" y1="160" x2="225" y2="160" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3,3" />
+                            <!-- Eyes level guide (located at exactly 38.3% of standard photo height) -->
+                            <line x1="70" y1="153" x2="230" y2="153" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3,3" />
 
-                            <!-- Chin level guide (located at exactly 58.75% of standard photo height) -->
-                            <line x1="90" y1="235" x2="210" y2="235" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3,3" />
+                            <!-- Chin level guide (located at exactly 63% of standard photo height) -->
+                            <line x1="90" y1="252" x2="210" y2="252" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3,3" />
 
                             <!-- Shoulder guides (exposing about 1/3~1/2 of upper shoulders symmetrically) -->
-                            <path d="M 40,340 Q 80,265 110,245" fill="none" stroke="#6366f1" stroke-width="2.5" />
-                            <path d="M 260,340 Q 220,265 190,245" fill="none" stroke="#6366f1" stroke-width="2.5" />
+                            <path d="M 35,350 Q 80,275 110,260" fill="none" stroke="#6366f1" stroke-width="2.5" />
+                            <path d="M 265,350 Q 220,275 190,260" fill="none" stroke="#6366f1" stroke-width="2.5" />
                         </svg>
 
                         <!-- Live Text Guide HUD -->
@@ -1402,11 +1402,11 @@
                 if (state.showCanvasGuides) {
                     ctx.save();
 
-                    // Head oval (cy = 33.75% of H, ry = 25% of H, rx = 75% of ry, top margin gap at 8.75% of H)
+                    // Head oval based on standard photo ratio: cx=150/300, cy=146/400, rx=80/300, ry=106/400
                     const cx = targetW / 2;
-                    const cy = 0.3375 * targetH;
-                    const ry = 0.25 * targetH;
-                    const rx = ry * 0.75;
+                    const cy = (146 / 400) * targetH;
+                    const ry = (106 / 400) * targetH;
+                    const rx = (80 / 300) * targetW;
 
                     ctx.strokeStyle = '#f59e0b';
                     ctx.lineWidth = Math.max(1.5, targetW / 200);
@@ -1417,17 +1417,17 @@
                     ctx.ellipse(cx, cy, rx, ry, 0, 0, 2 * Math.PI);
                     ctx.stroke();
 
-                    // Center horizontal (Eyes level at exactly 40% of photo height)
+                    // Center horizontal / Eyes level (located at exactly 38.3% of photo height)
                     ctx.strokeStyle = '#f59e0b';
-                    const eyesY = 0.40 * targetH;
+                    const eyesY = (153 / 400) * targetH;
                     ctx.beginPath();
                     ctx.moveTo(cx - rx, eyesY);
                     ctx.lineTo(cx + rx, eyesY);
                     ctx.stroke();
 
-                    // Chin level guide line (located at exactly 58.75% of standard photo height)
+                    // Chin level guide line (located at exactly 63% of photo height)
                     ctx.strokeStyle = '#f59e0b';
-                    const chinY = 0.5875 * targetH;
+                    const chinY = (252 / 400) * targetH;
                     ctx.beginPath();
                     ctx.moveTo(cx - rx * 0.8, chinY);
                     ctx.lineTo(cx + rx * 0.8, chinY);
@@ -1438,11 +1438,11 @@
                     ctx.lineWidth = Math.max(2.0, targetW / 150);
                     ctx.beginPath();
                     // Left shoulder
-                    ctx.moveTo(0.13 * targetW, 0.85 * targetH);
-                    ctx.quadraticCurveTo(0.26 * targetW, 0.66 * targetH, 0.37 * targetW, 0.61 * targetH);
+                    ctx.moveTo((35 / 300) * targetW, (350 / 400) * targetH);
+                    ctx.quadraticCurveTo((80 / 300) * targetW, (275 / 400) * targetH, (110 / 300) * targetW, (260 / 400) * targetH);
                     // Right shoulder
-                    ctx.moveTo(0.87 * targetW, 0.85 * targetH);
-                    ctx.quadraticCurveTo(0.74 * targetW, 0.66 * targetH, 0.63 * targetW, 0.61 * targetH);
+                    ctx.moveTo((265 / 300) * targetW, (350 / 400) * targetH);
+                    ctx.quadraticCurveTo((220 / 300) * targetW, (275 / 400) * targetH, (190 / 300) * targetW, (260 / 400) * targetH);
                     ctx.stroke();
 
                     ctx.restore();
